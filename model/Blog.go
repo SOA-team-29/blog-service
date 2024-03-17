@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -21,8 +22,9 @@ type Blog struct {
 	Title             string         `json:"title"`
 	Description       string         `json:"description"`
 	PublishedDateTime *time.Time     `json:"publishedDateTime,omitempty"`
+	ImageID           pq.StringArray `json:"images" gorm:"type:text[]"`
 	Status            BlogPostStatus `json:"status"`
-	UserId            int            `json:"userId"`
+	UserID            int            `json:"userId"`
 }
 
 func (blog *Blog) BeforeCreate(scope *gorm.DB) error {
