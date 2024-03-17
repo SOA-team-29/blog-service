@@ -3,8 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/lib/pq"
 )
 
@@ -17,13 +15,14 @@ const (
 )
 
 type Blog struct {
-	AuthorID          uuid.UUID      `json:"aid"`
-	TourID            uuid.UUID      `json:"tid"`
-	Title             string         `json:"title"`
-	Description       string         `json:"description"`
-	PublishedDateTime *time.Time     `json:"publishedDateTime,omitempty"`
-	ImageID           pq.StringArray `json:"images" gorm:"type:text[]"`
-	Status            BlogPostStatus `json:"status"`
-	BlogComments      []BlogComment  `json:"blogCom" gorm:"type:json"`
-	BlogRatings       []BlogRating   `json:"blogRate" gorm:"type:json"`
+	AuthorID            int64          `json:"aid"`
+	TourID              int64          `json:"tid"`
+	Title               string         `json:"title"`
+	Description         string         `json:"description"`
+	DescriptionMarkdown string         `json:"descriptionMarkdown"`
+	PublishedDateTime   *time.Time     `json:"publishedDateTime,omitempty"`
+	ImageID             pq.StringArray `json:"images" gorm:"type:text[]"`
+	Status              BlogPostStatus `json:"status"`
+	BlogComments        []BlogComment  `json:"blogCom" gorm:"type:json"`
+	BlogRatings         []BlogRating   `json:"blogRate" gorm:"type:json"`
 }
