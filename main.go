@@ -21,7 +21,7 @@ func initDB() *gorm.DB {
 		print(err)
 		return nil
 	}
-	database.AutoMigrate(&model.Blog{})
+	database.AutoMigrate(&model.Blog{}, &model.BlogComment{}, &model.BlogRating{})
 	return database
 }
 
