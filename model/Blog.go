@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/lib/pq"
-	"gorm.io/gorm"
 )
 
 type BlogPostStatus int
@@ -18,16 +17,13 @@ const (
 )
 
 type Blog struct {
-	ID                uuid.UUID      `json:"id"`
+	AuthorID          uuid.UUID      `json:"aid"`
+	TourID            uuid.UUID      `json:"tid"`
 	Title             string         `json:"title"`
 	Description       string         `json:"description"`
 	PublishedDateTime *time.Time     `json:"publishedDateTime,omitempty"`
 	ImageID           pq.StringArray `json:"images" gorm:"type:text[]"`
 	Status            BlogPostStatus `json:"status"`
-	UserID            int            `json:"userId"`
-}
-
-func (blog *Blog) BeforeCreate(scope *gorm.DB) error {
-	blog.ID = uuid.New()
-	return nil
+	BlogComments      []BlogComment  `json:"blogCom" gorm:"type:json"`
+	BlogRatings       []BlogRating   `json:"blogRate" gorm:"type:json"`
 }
