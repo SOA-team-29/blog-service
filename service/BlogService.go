@@ -31,3 +31,17 @@ func (service *BlogService) GetAll(page, pageSize int) (*[]model.Blog, error) {
 	}
 	return &blogs, nil
 }
+func (service *BlogService) SetBlogComments(blogID int, comments []model.BlogComment) error {
+	err := service.BlogRepository.SetBlogComments(blogID, comments)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (service *BlogService) GetBlogByID(ID int) (*model.Blog, error) {
+	blog, err := service.BlogRepository.GetBlogByID(ID)
+	if err != nil {
+		return &model.Blog{}, err
+	}
+	return &blog, nil
+}

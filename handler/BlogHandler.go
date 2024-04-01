@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -101,30 +102,6 @@ func convertStatusToNumber(status string) int {
 	}
 }
 
-func (handler *BlogHandler) Get(writer http.ResponseWriter, req *http.Request) {
-	blogId := mux.Vars(req)["id"]
-	log.Printf("Blog with id: %s", blogId)
-
-	blog, err := handler.BlogService.FindBlog(blogId)
-	if err != nil {
-		writer.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	/*comments, _ := handler.BlogCommentService.GetByBlogId(blogId)
-
-	var commentPointers []*model.BlogComment
-	for _, comment := range comments {
-		commentPointers = append(commentPointers, &comment)
-	}
-
-	blog.BlogComments = commentPointers*/
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(blog)
-}
-
 func (h *BlogHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	log.Println("Received request to get all blogs")
 	pageStr := r.URL.Query().Get("page")
@@ -161,17 +138,18 @@ func (h *BlogHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 			"ratings":      blog.Ratings,
 			"status":       convertStatusToString(int(blog.Status)),
 		}
-		/*
-			// Konvertujte TransportType u string u modifikovanom tura objektu
-			characteristics := make([]map[string]interface{}, len(tour.TourCharacteristics))
-			for j, characteristic := range tour.TourCharacteristics {
-				characteristics[j] = map[string]interface{}{
-					"distance":      characteristic.Distance,
-					"duration":      characteristic.Duration,
-					"transportType": convertTransportTypeToString(characteristic.TransportType),
-				}
+
+		// Konvertujte TransportType u string u modifikovanom tura objektu
+		comments := make([]map[string]interface{}, len(blog.Comments))
+		for j, comment := range blog.Comments {
+			comments[j] = map[string]interface{}{
+				"text":            comment.Text,
+				"userId":          comment.UserID,
+				"creationTime":    comment.CreationTime,
+				"lastUpdatedTime": comment.LastUpdatedTime,
 			}
-			modifiedTour["tourCharacteristics"] = characteristics*/
+		}
+		modifiedBlog["comments"] = comments
 
 		modifiedBlogs[i] = modifiedBlog
 	}
@@ -195,4 +173,137 @@ func convertStatusToString(status int) string {
 	default:
 		return ""
 	}
+}
+func (h *BlogHandler) SetBlogComments(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("Received request to set blog comments")
+
+	params := mux.Vars(r)
+	blogIDStr, ok := params["blogId"]
+	if !ok {
+		log.Println("Blog ID not provided")
+		http.Error(w, "Blog ID not provided", http.StatusBadRequest)
+		return
+	}
+	blogID, err := strconv.Atoi(blogIDStr)
+	if err != nil {
+		log.Println("Invalid blog ID:", err)
+		http.Error(w, "Invalid blog ID", http.StatusBadRequest)
+		return
+	}
+
+	// Čitanje JSON podataka iz tela zahteva
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading request body:", err)
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	// Ispisivanje JSON podataka pre dekodiranja
+	log.Println("Received JSON data:", string(body))
+
+	// Modifikacija polja transport pre dekodiranja
+	modifiedBody := modifyJSONForComments(body)
+
+	var blogComment []model.BlogComment
+	decoder := json.NewDecoder(bytes.NewReader(modifiedBody))
+
+	err = decoder.Decode(&blogComment)
+	if err != nil {
+		log.Println("Error decoding JSON:", err)
+		http.Error(w, "Failed to decode JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.BlogService.SetBlogComments(blogID, blogComment)
+	if err != nil {
+		log.Println("Error setting blog comments:", err)
+		http.Error(w, "Failed to set blog comments", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Blog comments successfully set"))
+}
+
+func modifyJSONForComments(data []byte) []byte {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		log.Println("Error decoding JSON:", err)
+		return data
+	}
+
+	// Pretvaranje modifikovanog objekta u niz objekata
+	blogComments := make([]model.BlogComment, 1)
+	blogComments[0] = model.BlogComment{
+		Text:            jsonData["text"].(string),
+		UserID:          jsonData["userId"].(int),
+		CreationTime:    jsonData["creationTime"].(time.Time),
+		LastUpdatedTime: jsonData["lastUpdatedTime"].(time.Time),
+	}
+
+	// Konverzija nazad u JSON
+	modifiedBody, err := json.Marshal(blogComments)
+	if err != nil {
+		log.Println("Error encoding modified JSON:", err)
+		return data
+	}
+
+	return modifiedBody
+}
+func (h *BlogHandler) GetBlogByID(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	IDStr, ok := params["id"]
+	if !ok {
+		log.Println("ID not provided")
+		http.Error(w, "ID not provided", http.StatusBadRequest)
+		return
+	}
+	ID, err := strconv.Atoi(IDStr)
+	if err != nil {
+		log.Println("Invalid tour ID:", err)
+		http.Error(w, "Invalid tour ID", http.StatusBadRequest)
+		return
+	}
+
+	blog, err := h.BlogService.GetBlogByID(ID)
+	if err != nil {
+		log.Println("Error getting tour by ID:", err)
+		http.Error(w, "Failed to get tour by ID", http.StatusInternalServerError)
+		return
+	}
+
+	//Moja provera da li je nasao dobro iz baze
+	log.Println("Blogs:", blog)
+	modifiedBlog := map[string]interface{}{
+		"id":           blog.ID,
+		"authorId":     blog.AuthorID,
+		"tourId":       blog.TourID,
+		"title":        blog.Title,
+		"description":  blog.Description,
+		"creationDate": blog.CreationDate,
+		"imageURLs":    blog.ImageURLs,
+		"comments":     blog.Comments,
+		"ratings":      blog.Ratings,
+		"status":       convertStatusToString(int(blog.Status)),
+	}
+
+	// Konvertujte TransportType u string u modifikovanom tura objektu
+	comments := make([]map[string]interface{}, len(blog.Comments))
+	for j, comment := range blog.Comments {
+		comments[j] = map[string]interface{}{
+			"text":            comment.Text,
+			"userId":          comment.UserID,
+			"creationTime":    comment.CreationTime,
+			"lastUpdatedTime": comment.LastUpdatedTime,
+		}
+	}
+	modifiedBlog["comments"] = comments
+
+	// Slanje odgovora sa tura podacima kao JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(modifiedBlog)
 }

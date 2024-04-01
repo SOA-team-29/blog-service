@@ -25,19 +25,16 @@ func initDB() *gorm.DB {
 	return database
 }
 
-func startServer(blogHandler *handler.BlogHandler, blogComHandler *handler.BlogCommentHandler) {
+func startServer(blogHandler *handler.BlogHandler) {
 	router := mux.NewRouter().StrictSlash(true)
 	//Blog
 	router.HandleFunc("/blogs", blogHandler.CreateBlog).Methods("POST")
 	router.HandleFunc("/blogs/all", blogHandler.GetAll).Methods("GET")
-	router.HandleFunc("/blogs/{id}", blogHandler.Get).Methods("GET")
-	//BlogComments
-	router.HandleFunc("/comments/{blogId}", blogComHandler.GetByBlogId).Methods("GET")
-	router.HandleFunc("/comments/add{blogId}", blogComHandler.Create).Methods("Post")
-	router.HandleFunc("/comments/delete{blogid}", blogComHandler.Delete).Methods("PUT")
-	router.PathPrefix("/").Handler(http.FileServer(http.Dir("./static")))
+	router.HandleFunc("/blogs/{id}", blogHandler.GetBlogByID).Methods("GET")
+	router.HandleFunc("/blogs/comments/{blogId}", blogHandler.SetBlogComments).Methods("PUT")
+
 	println("Server starting")
-	log.Fatal(http.ListenAndServe(":8081", router))
+	log.Fatal(http.ListenAndServe(":8082", router))
 }
 
 func main() {
@@ -45,13 +42,10 @@ func main() {
 
 	// Prikaz detalja blog posta
 
-	blogCommentRepo := &repo.BlogCommentRepository{DatabaseConnection: database}
-	blogCommentService := &service.BlogCommentService{BlogCommentRepository: blogCommentRepo}
-	blogCommentHandler := &handler.BlogCommentHandler{BlogCommentService: blogCommentService}
 	blogRepo := &repo.BlogRepository{DatabaseConnection: database}
 	blogService := &service.BlogService{BlogRepository: blogRepo}
 	blogHandler := &handler.BlogHandler{BlogService: blogService}
 
-	startServer(blogHandler, blogCommentHandler)
+	startServer(blogHandler)
 
 }

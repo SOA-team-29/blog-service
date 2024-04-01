@@ -30,15 +30,3 @@ type Blog struct {
 	Ratings      BlogRatings    `json:"ratings" gorm:"type:jsonb"`
 	Status       BlogPostStatus `json:"status"`
 }
-
-/*func (blog *Blog) BeforeCreate(scope *gorm.DB) error {
-	blog.ID = uuid.New()
-	return nil
-}
-
-func (blog *Blog) AfterCreate(scope *gorm.DB) error {
-	for _, comment := range blog.BlogComments {
-		scope.Model(blog).Association("BlogComments").Append(comment)
-	}
-	return nil
-} */
